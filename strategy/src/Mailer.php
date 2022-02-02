@@ -8,34 +8,95 @@ use PHPMailer\PHPMailer\Exception;
 class Mailer
 {
 
-    private $sender;
+    protected $sender;
+    protected $sent = [];
+    protected $transport;
+    protected $filename;
+    protected $username;
+    protected $host;
+    protected $password;
+    protected $port;
+
+    public function __construct($transport = 'smtp')
+    {
+        $this->transport = $transport;
+    }
 
     public function setSender($email)
     {
         $this->sender = $email;
     }
 
+    public function setFilename($filename)
+    {
+        $this->filename = $filename;
+    }
+
+    public function setUsername($username)
+    {
+        $this->username = $username;
+    }
+
+    public function setHost($host)
+    {
+        $this->host = $host;
+    }
+
+    public function setPassword($password)
+    {
+        $this->password = $password;
+    }
+
+    public function setPort($port)
+    {
+        $this->port = $port;
+    }
+
     /**
      * @throws Exception
      */
-    public function send($recipient, $subject, $body): bool
+    public function send($recipient, $subject, $body)
     {
-        $phpMailer = new PHPMailer(true);
 
-        $phpMailer->isSMTP();
-        $phpMailer->Host       = 'smtp.mailtrap.io';
-        $phpMailer->SMTPAuth   = true;
-        $phpMailer->Username   = '3aec810bf70f8c';
-        $phpMailer->Password   = '13ba04177cac32';
-        $phpMailer->Port       = 2525;
+        if ($this->transport == 'smtp'){
 
-        $phpMailer->setFrom($this->sender);
-        $phpMailer->addAddress($recipient);
-        $phpMailer->Subject = $subject;
-        $phpMailer->Body = $body;
-        $phpMailer->AltBody = $body;
+            $phpMailer = new PHPMailer(true);
 
-        return $phpMailer->send();
+            $phpMailer->isSMTP();
+            $phpMailer->Host       = $this->host;
+            $phpMailer->SMTPAuth   = true;
+            $phpMailer->Username   = $this->username;
+            $phpMailer->Password   = $this->password;
+            $phpMailer->Port       = $this->port;
+
+            $phpMailer->setFrom($this->sender);
+            $phpMailer->addAddress($recipient);
+            $phpMailer->Subject = $subject;
+            $phpMailer->Body = $body;
+            $phpMailer->AltBody = $body;
+
+            return $phpMailer->send();
+        }
+
+        if ($this->transport == 'array'){
+            $this->sent[] = compact('recipient', 'subject', 'body');
+        }
+
+        if ($this->transport == 'file'){
+            $data = [
+                'New Email',
+                "Recipient: {$recipient}",
+                "Subject: {$subject}",
+                "Body: {$body}",
+            ];
+
+            file_put_contents($this->filename, "\n\n".implode("\n",  $data), FILE_APPEND);
+        }
+    }
+
+    public function sent(): array
+    {
+        return $this->sent;
     }
 
 
