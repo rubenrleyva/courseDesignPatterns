@@ -18,7 +18,10 @@
         }
     ],
     "minimum-stability": "dev",
-    "require": {},
+    "require": {
+        "stephanecoinon/mailtrap": "dev-master",
+        "phpmailer/phpmailer": "dev-master"
+    },
     "autoload-dev": {
         "psr-4": {
             "Rubenrl\\Strategy\\Tests\\": "tests/"
