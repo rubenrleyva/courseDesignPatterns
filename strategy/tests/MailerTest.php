@@ -3,24 +3,25 @@
 namespace Rubenrl\Strategy\Tests;
 
 use PHPMailer\PHPMailer\Exception;
-use Rubenrl\Strategy\Mailer;
+use Rubenrl\Strategy\ArrayTransport;
+use Rubenrl\Strategy\FileTransport;
+use Rubenrl\Strategy\SmtpTransport;
 use StephaneCoinon\Mailtrap\Client;
 use StephaneCoinon\Mailtrap\Inbox;
 use StephaneCoinon\Mailtrap\Model;
+use Rubenrl\Strategy\Mailer;
 
 class MailerTest extends TestCase
 {
-    /** @test
-     * @throws Exception
-     */
+    /** @test */
     public function it_stores_the_sent_emails_in_an_array()
     {
-        $mailer = new Mailer('array');
+        $mailer = new Mailer($transport = new ArrayTransport());
         $mailer->setSender('example@outlook.com');
 
         $mailer->send('example@outlook.com', 'An example message', 'The content of the message');
 
-        $sent = $mailer->sent();
+        $sent = $transport->sent();
 
         $this->assertCount(1, $sent);
         $this->assertSame('example@outlook.com', $sent[0]['recipient']);
@@ -29,18 +30,16 @@ class MailerTest extends TestCase
 
     }
 
-    /** @test
-     * @throws Exception
-     */
+    /** @test */
     public function it_stores_the_sent_emails_in_a_log_file()
     {
         $filename = __DIR__ . '\storage\test.txt';
-        //@unlink($filename);
+        @unlink($filename);
 
-        $mailer = new Mailer('file');
+        $mailer = new Mailer(new FileTransport($filename));
         $mailer->setSender('example@outlook.com');
 
-        $mailer->setFilename($filename);
+        //$mailer->setFilename($filename);
         $mailer->send('example@outlook.com', 'An example message', 'The content of the message');
 
         $content = file_get_contents($filename);
@@ -61,15 +60,19 @@ class MailerTest extends TestCase
 
         Model::boot($client);
 
-        $inbox = Inbox::find(1620526);
+        $inbox = Inbox::find('');
 
         $inbox->empty();
 
-        $mailer = new Mailer('smtp');
-        $mailer->setHost('smtp.mailtrap.io');
-        $mailer->setUsername('--------------');
-        $mailer->setPassword('-----------------');
-        $mailer->setPort('--------------');
+        $mailer = new Mailer(
+            new SmtpTransport(
+                'smtp.mailtrap.io',
+                '-------------------',
+                '-------------------',
+                ''
+            )
+        );
+
         $mailer->setSender('example@outlook.com');
 
         $this->assertTrue($mailer->send('rubenrleyva@outlook.com', 'An example message', 'The content of the message'));
@@ -77,7 +80,7 @@ class MailerTest extends TestCase
         $newestMessage = $inbox->lastMessage();
 
         $this->assertNotNull($newestMessage);
-        $this->assertSame(['example@outlook.com'], $newestMessage->recipientEmails());
+        $this->assertSame(['rubenrleyva@outlook.com'], $newestMessage->recipientEmails());
         $this->assertSame('An example message', $newestMessage->subject());
 
         $this->assertSame('The content of the message', trim($newestMessage->textBody()));
